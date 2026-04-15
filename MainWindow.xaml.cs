@@ -33,11 +33,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        Calendar.SelectedDate = DateTime.Now;
-        ReminderDatePicker.SelectedDate = DateTime.Now;
 
         _workLogService = new WorkLogService(dbPath);
         _workLogService.Initialize();
+
+        Calendar.SelectedDate = DateTime.Now;
+        ReminderDatePicker.SelectedDate = DateTime.Now;
 
         LoadWorkPlanFile(); // 自动加载工作计划文件
         UpdateWorkRecordList();
@@ -79,7 +80,7 @@ public partial class MainWindow : Window
 
     private void CheckFirstOpenToday()
     {
-        string lastOpenFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WorkLogTool", "lastopen.txt");
+        string lastOpenFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "worklog", "lastopen.txt");
         Directory.CreateDirectory(Path.GetDirectoryName(lastOpenFile));
         
         bool isFirstOpenToday = true;
@@ -906,6 +907,7 @@ public partial class MainWindow : Window
                 AcceptsReturn = true
             };
             contentTextBox.Name = "ContentTextBox";
+            DetailPanel.RegisterName(contentTextBox.Name, contentTextBox);
             DetailPanel.Children.Add(contentTextBox);
 
             // 日期
@@ -918,6 +920,7 @@ public partial class MainWindow : Window
                 DisplayDateEnd = new DateTime(2100, 12, 31)
             };
             datePicker.Name = "DatePicker";
+            DetailPanel.RegisterName(datePicker.Name, datePicker);
             DetailPanel.Children.Add(datePicker);
 
             // 耗时
@@ -929,6 +932,7 @@ public partial class MainWindow : Window
                 Width = 80
             };
             hoursTextBox.Name = "HoursTextBox";
+            DetailPanel.RegisterName(hoursTextBox.Name, hoursTextBox);
             DetailPanel.Children.Add(hoursTextBox);
 
             // 成本
@@ -1211,6 +1215,7 @@ public partial class MainWindow : Window
                 AcceptsReturn = true
             };
             contentTextBox.Name = "ContentTextBox";
+            DetailPanel.RegisterName(contentTextBox.Name, contentTextBox);
             DetailPanel.Children.Add(contentTextBox);
 
             // 日期
@@ -1223,6 +1228,7 @@ public partial class MainWindow : Window
                 DisplayDateEnd = new DateTime(2100, 12, 31)
             };
             datePicker.Name = "DatePicker";
+            DetailPanel.RegisterName(datePicker.Name, datePicker);
             DetailPanel.Children.Add(datePicker);
 
             // 耗时
@@ -1234,6 +1240,7 @@ public partial class MainWindow : Window
                 Width = 80
             };
             hoursTextBox.Name = "HoursTextBox";
+            DetailPanel.RegisterName(hoursTextBox.Name, hoursTextBox);
             DetailPanel.Children.Add(hoursTextBox);
 
             // 成本
