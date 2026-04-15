@@ -250,7 +250,17 @@ public class SqliteHelper
     {
         using var connection = new SqliteConnection($"Data Source={_dbPath}");
         connection.Open();
-        MarkAsDeletedInternal(record, connection);
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            MarkAsDeletedInternal(record, connection);
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
     }
 
     /// <summary>
@@ -258,11 +268,13 @@ public class SqliteHelper
     /// </summary>
     private void MarkAsDeletedInternal(WorkRecord record, SqliteConnection connection)
     {
+        if (record.Id <= 0) return;
+        
         record.IsDeleted = 1;
 
         var command = connection.CreateCommand();
-        command.CommandText = "UPDATE WorkRecords SET IsDeleted = 1 WHERE Id = $id";
-        command.Parameters.AddWithValue("$id", record.Id);
+        command.CommandText = "UPDATE WorkRecords SET IsDeleted = 1 WHERE Id = @Id";
+        command.Parameters.AddWithValue("@Id", record.Id);
         command.ExecuteNonQuery();
 
         foreach (var subTask in record.SubTasks)

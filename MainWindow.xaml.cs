@@ -43,9 +43,29 @@ public partial class MainWindow : Window
 
         LoadWorkPlanFile(); // 自动加载工作计划文件
         UpdateWorkRecordList();
+        UpdateIncompleteTasksStatus();
         CheckTodayReminders();
         InitializeTimers();
         CheckFirstOpenToday();
+    }
+
+    private void UpdateIncompleteTasksStatus()
+    {
+        var incompleteTasks = _workLogService.WorkRecords
+            .Where(r => r.Status != "已完成" && r.IsDeleted == 0)
+            .OrderBy(r => r.Date)
+            .Take(10)
+            .Select(r => $"[{r.Date:MM-dd}] {r.Content}")
+            .ToList();
+
+        if (incompleteTasks.Count > 0)
+        {
+            StatusText.Text = "待完成: " + string.Join(" | ", incompleteTasks);
+        }
+        else
+        {
+            StatusText.Text = "就绪";
+        }
     }
 
     private void LoadWorkPlanFile()
@@ -322,6 +342,7 @@ public partial class MainWindow : Window
 
         WorkRecordDataGrid.ItemsSource = selectedDateRecords;
         UpdateTodayTaskList(date);
+        UpdateIncompleteTasksStatus();
     }
 
     // 更新左侧日历下方的当天任务列表
@@ -1164,15 +1185,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        // 确认删除
-        var result = MessageBox.Show($"确定要删除工作记录 \"{record.Content}\" 吗？\n删除后无法恢复。", "确认删除",
-            MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-        if (result != MessageBoxResult.Yes)
-        {
-            return;
-        }
-
         // 软删除：标记为已删除（包括所有子任务）
         _workLogService.DeleteWorkRecord(record);
 
@@ -1189,7 +1201,6 @@ public partial class MainWindow : Window
         });
 
         StatusText.Text = $"工作记录 \"{record.Content}\" 已删除";
-        MessageBox.Show("删除成功", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
 
