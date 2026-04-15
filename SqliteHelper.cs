@@ -43,6 +43,7 @@ public class SqliteHelper
                 Progress INTEGER DEFAULT 0,
                 StartTime TEXT,
                 EndTime TEXT,
+                CreatedDate TEXT,
                 ParentId INTEGER,
                 Level INTEGER DEFAULT 0,
                 IsDeleted INTEGER DEFAULT 0,
@@ -56,6 +57,18 @@ public class SqliteHelper
         {
             var addColumnCommand = connection.CreateCommand();
             addColumnCommand.CommandText = "ALTER TABLE WorkRecords ADD COLUMN IsDeleted INTEGER DEFAULT 0";
+            addColumnCommand.ExecuteNonQuery();
+        }
+        catch
+        {
+            // 列已经存在，忽略错误
+        }
+
+        // 尝试添加 CreatedDate 列
+        try
+        {
+            var addColumnCommand = connection.CreateCommand();
+            addColumnCommand.CommandText = "ALTER TABLE WorkRecords ADD COLUMN CreatedDate TEXT";
             addColumnCommand.ExecuteNonQuery();
         }
         catch
@@ -109,7 +122,7 @@ public class SqliteHelper
             UPDATE WorkRecords
             SET Content = $content, Date = $date, Hours = $hours, Cost = $cost,
                 Status = $status, Progress = $progress, StartTime = $startTime, EndTime = $endTime,
-                ParentId = $parentId, Level = $level, IsDeleted = $isDeleted
+                CreatedDate = $createdDate, ParentId = $parentId, Level = $level, IsDeleted = $isDeleted
             WHERE Id = $id";
 
         command.Parameters.AddWithValue("$content", record.Content);
@@ -120,6 +133,7 @@ public class SqliteHelper
         command.Parameters.AddWithValue("$progress", record.Progress);
         command.Parameters.AddWithValue("$startTime", record.StartTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("$endTime", record.EndTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("$createdDate", record.CreatedDate == default ? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") : record.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss"));
         command.Parameters.AddWithValue("$parentId", record.ParentId.HasValue ? (object)record.ParentId.Value : DBNull.Value);
         command.Parameters.AddWithValue("$level", record.Level);
         command.Parameters.AddWithValue("$isDeleted", record.IsDeleted);
@@ -137,7 +151,7 @@ public class SqliteHelper
         command.CommandText = @"
             UPDATE WorkRecords
             SET Hours = @Hours, Cost = @Cost, Status = @Status, Progress = @Progress,
-                StartTime = @StartTime, EndTime = @EndTime, ParentId = @ParentId, Level = @Level, IsDeleted = @IsDeleted
+                StartTime = @StartTime, EndTime = @EndTime, CreatedDate = @CreatedDate, ParentId = @ParentId, Level = @Level, IsDeleted = @IsDeleted
             WHERE Content = @Content AND Date = @Date AND IsDeleted = 0";
 
         command.Parameters.AddWithValue("@Hours", record.Hours);
@@ -146,6 +160,7 @@ public class SqliteHelper
         command.Parameters.AddWithValue("@Progress", record.Progress);
         command.Parameters.AddWithValue("@StartTime", record.StartTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("@EndTime", record.EndTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@CreatedDate", record.CreatedDate == default ? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") : record.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss"));
         command.Parameters.AddWithValue("@ParentId", record.ParentId.HasValue ? (object)record.ParentId.Value : DBNull.Value);
         command.Parameters.AddWithValue("@Level", record.Level);
         command.Parameters.AddWithValue("@IsDeleted", record.IsDeleted);
@@ -162,8 +177,8 @@ public class SqliteHelper
     {
         var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO WorkRecords (Date, Content, Hours, Cost, Status, Progress, StartTime, EndTime, ParentId, Level, IsDeleted)
-            VALUES (@Date, @Content, @Hours, @Cost, @Status, @Progress, @StartTime, @EndTime, @ParentId, @Level, @IsDeleted)";
+            INSERT INTO WorkRecords (Date, Content, Hours, Cost, Status, Progress, StartTime, EndTime, CreatedDate, ParentId, Level, IsDeleted)
+            VALUES (@Date, @Content, @Hours, @Cost, @Status, @Progress, @StartTime, @EndTime, @CreatedDate, @ParentId, @Level, @IsDeleted)";
 
         command.Parameters.AddWithValue("@Date", record.Date.ToString("yyyy-MM-dd"));
         command.Parameters.AddWithValue("@Content", record.Content);
@@ -173,6 +188,7 @@ public class SqliteHelper
         command.Parameters.AddWithValue("@Progress", record.Progress);
         command.Parameters.AddWithValue("@StartTime", record.StartTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? (object)DBNull.Value);
         command.Parameters.AddWithValue("@EndTime", record.EndTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? (object)DBNull.Value);
+        command.Parameters.AddWithValue("@CreatedDate", record.CreatedDate == default ? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") : record.CreatedDate.ToString("yyyy-MM-dd HH:mm:ss"));
         command.Parameters.AddWithValue("@ParentId", record.ParentId.HasValue ? (object)record.ParentId.Value : DBNull.Value);
         command.Parameters.AddWithValue("@Level", record.Level);
         command.Parameters.AddWithValue("@IsDeleted", record.IsDeleted);
@@ -190,7 +206,7 @@ public class SqliteHelper
         connection.Open();
 
         var selectCommand = connection.CreateCommand();
-        selectCommand.CommandText = "SELECT * FROM WorkRecords WHERE IsDeleted = 0 ORDER BY Date DESC";
+        selectCommand.CommandText = "SELECT * FROM WorkRecords ORDER BY Date DESC";
 
         using var reader = selectCommand.ExecuteReader();
         while (reader.Read())
@@ -206,9 +222,10 @@ public class SqliteHelper
                 Progress = reader.GetInt32(6),
                 StartTime = reader.IsDBNull(7) ? null : DateTime.Parse(reader.GetString(7)),
                 EndTime = reader.IsDBNull(8) ? null : DateTime.Parse(reader.GetString(8)),
-                ParentId = reader.IsDBNull(9) ? null : reader.GetInt32(9),
-                Level = reader.GetInt32(10),
-                IsDeleted = reader.GetInt32(11)
+                CreatedDate = reader.IsDBNull(9) ? DateTime.MinValue : DateTime.Parse(reader.GetString(9)),
+                ParentId = reader.IsDBNull(10) ? null : reader.GetInt32(10),
+                Level = reader.IsDBNull(11) ? 0 : reader.GetInt32(11),
+                IsDeleted = reader.IsDBNull(12) ? 0 : reader.GetInt32(12)
             };
             workRecords.Add(record);
         }

@@ -84,7 +84,8 @@ public partial class AddWorkPlanDialog : Window
             Status = _currentStatus,
             Progress = (int)ProgressComboBox.SelectedValue,
             StartTime = startTime,
-            EndTime = endTime
+            EndTime = endTime,
+            CreatedDate = DateTime.Now
         };
 
         DialogResult = true;

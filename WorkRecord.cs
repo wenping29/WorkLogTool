@@ -16,6 +16,7 @@ public class WorkRecord
     public int Progress { get; set; } = 0; // 工作进度 0-100
     public DateTime? StartTime { get; set; } // 开始时间
     public DateTime? EndTime { get; set; } // 完成时间
+    public DateTime CreatedDate { get; set; } // 创建日期
     public List<WorkRecord> SubTasks { get; set; } = new List<WorkRecord>(); // 子任务列表
     public bool IsExpanded { get; set; } = false; // 是否展开
     public WorkRecord Parent { get; set; } // 父任务

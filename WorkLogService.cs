@@ -38,7 +38,7 @@ public class WorkLogService
     /// </summary>
     private void LoadAllWorkRecords()
     {
-        _workRecords = _sqliteHelper.LoadAllWorkRecords();
+        _workRecords = _sqliteHelper.LoadAllWorkRecords().Where(r => r.IsDeleted == 0).ToList();
     }
 
     /// <summary>
@@ -131,6 +131,22 @@ public class WorkLogService
         {
             CollectAllTasks(subTask, allTasks);
         }
+    }
+
+    /// <summary>
+    /// 获取指定日期新增的工作计划（顶级任务）
+    /// </summary>
+    public List<WorkRecord> GetNewRecordsByDate(DateTime date)
+    {
+        return _workRecords.Where(r => r.CreatedDate.Date == date.Date && r.Parent == null && r.IsDeleted == 0).ToList();
+    }
+
+    /// <summary>
+    /// 获取指定日期未完成的工作计划
+    /// </summary>
+    public List<WorkRecord> GetIncompleteRecordsByDate(DateTime date)
+    {
+        return _workRecords.Where(r => r.Date.Date == date.Date && r.Status != "已完成" && r.Parent == null && r.IsDeleted == 0).ToList();
     }
 
     /// <summary>

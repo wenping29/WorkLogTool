@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private readonly WorkLogService _workLogService;
     private List<Reminder> reminders = new List<Reminder>();
     private List<KanbanItem> kanbanItems = new List<KanbanItem>();
+    private DateTime _currentSelectedDate = DateTime.Today;
 
     private readonly string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "worklog.db");
 
@@ -71,6 +72,14 @@ public partial class MainWindow : Window
     }
 
     private void Calendar_SelectedDatesChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (Calendar.SelectedDate.HasValue)
+        {
+            UpdateWorkRecordList(Calendar.SelectedDate.Value);
+        }
+    }
+
+    private void FilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (Calendar.SelectedDate.HasValue)
         {
@@ -134,7 +143,8 @@ public partial class MainWindow : Window
             Hours = hours,
             Cost = cost,
             Status = "进行中",
-            Progress = 0
+            Progress = 0,
+            CreatedDate = DateTime.Now
         };
 
         _workLogService.AddWorkRecord(record);
@@ -294,41 +304,39 @@ public partial class MainWindow : Window
 
     private void UpdateWorkRecordList(DateTime date)
     {
-        // 过滤出选定日期的工作记录，显示所有顶级任务
-        var selectedDateRecords = _workLogService.GetTopLevelRecordsByDate(date);
-        WorkRecordDataGrid.ItemsSource = selectedDateRecords;
+        _currentSelectedDate = date;
+        List<WorkRecord> selectedDateRecords;
 
-        // 更新左侧日历下方的当天任务列表（包含所有任务，包括子任务）
+        switch (FilterComboBox.SelectedIndex)
+        {
+            case 1: // 新增计划
+                selectedDateRecords = _workLogService.GetNewRecordsByDate(date);
+                break;
+            case 2: // 未完成计划
+                selectedDateRecords = _workLogService.GetIncompleteRecordsByDate(date);
+                break;
+            default: // 全部记录
+                selectedDateRecords = _workLogService.GetTopLevelRecordsByDate(date);
+                break;
+        }
+
+        WorkRecordDataGrid.ItemsSource = selectedDateRecords;
         UpdateTodayTaskList(date);
     }
 
     // 更新左侧日历下方的当天任务列表
     private void UpdateTodayTaskList(DateTime date)
     {
-        TodayTaskList.Items.Clear();
-
-        // 获取当天所有任务（包括顶级任务和子任务）
         var allTasks = _workLogService.GetAllTasksByDate(date);
 
         // 添加到列表框
         if (allTasks.Count == 0)
         {
-            TodayTaskList.Items.Add("(暂无任务)");
+            TodayTaskList.ItemsSource = new List<string> { "(暂无任务)" };
         }
         else
         {
-            foreach (var task in allTasks)
-            {
-                string displayText = $"[{task.Status}] {task.Content} ({task.Progress}%)";
-                TodayTaskList.Items.Add(displayText);
-            }
-
-            // 添加统计信息
-            int totalTasks = allTasks.Count;
-            int completedTasks = allTasks.Count(t => t.Status == "已完成");
-            TodayTaskList.Items.Add($"--------");
-            TodayTaskList.Items.Add($"总计: {totalTasks} 项");
-            TodayTaskList.Items.Add($"已完成: {completedTasks} 项");
+            TodayTaskList.ItemsSource = allTasks;
         }
     }
 
@@ -856,6 +864,18 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ClearDetailPanel()
+    {
+        foreach (var child in DetailPanel.Children.OfType<FrameworkElement>())
+        {
+            if (!string.IsNullOrEmpty(child.Name))
+            {
+                try { DetailPanel.UnregisterName(child.Name); } catch { }
+            }
+        }
+        DetailPanel.Children.Clear();
+    }
+
     private void CheckEndOfWorkDay()
     {
         var now = DateTime.Now;
@@ -880,7 +900,7 @@ public partial class MainWindow : Window
 
     private void WorkRecordTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        DetailPanel.Children.Clear();
+        ClearDetailPanel();
 
         if (e.NewValue is WorkRecord record)
         {
@@ -1158,7 +1178,7 @@ public partial class MainWindow : Window
 
         // 更新UI
         UpdateWorkRecordList();
-        DetailPanel.Children.Clear();
+        ClearDetailPanel();
         DetailPanel.Children.Add(new TextBlock
         {
             Text = "记录已删除\n请点击表格中的工作记录查看详情",
@@ -1188,7 +1208,7 @@ public partial class MainWindow : Window
 
     private void WorkRecordDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        DetailPanel.Children.Clear();
+        ClearDetailPanel();
 
         if (WorkRecordDataGrid.SelectedItem is WorkRecord record)
         {
