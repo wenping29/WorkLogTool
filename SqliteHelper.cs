@@ -206,7 +206,7 @@ public class SqliteHelper
         connection.Open();
 
         var selectCommand = connection.CreateCommand();
-        selectCommand.CommandText = "SELECT * FROM WorkRecords ORDER BY Date DESC";
+        selectCommand.CommandText = "SELECT * FROM WorkRecords WHERE IsDeleted = 0 OR IsDeleted IS NULL ORDER BY Date DESC";
 
         using var reader = selectCommand.ExecuteReader();
         while (reader.Read())
@@ -225,7 +225,7 @@ public class SqliteHelper
                 CreatedDate = reader.IsDBNull(9) ? DateTime.MinValue : DateTime.Parse(reader.GetString(9)),
                 ParentId = reader.IsDBNull(10) ? null : reader.GetInt32(10),
                 Level = reader.IsDBNull(11) ? 0 : reader.GetInt32(11),
-                IsDeleted = reader.IsDBNull(12) ? 0 : reader.GetInt32(12)
+                IsDeleted = 0
             };
             workRecords.Add(record);
         }

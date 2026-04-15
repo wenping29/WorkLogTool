@@ -38,7 +38,7 @@ public class WorkLogService
     /// </summary>
     private void LoadAllWorkRecords()
     {
-        _workRecords = _sqliteHelper.LoadAllWorkRecords().Where(r => r.IsDeleted == 0).ToList();
+        _workRecords = _sqliteHelper.LoadAllWorkRecords();
     }
 
     /// <summary>
@@ -105,7 +105,7 @@ public class WorkLogService
     /// </summary>
     public List<WorkRecord> GetTopLevelRecordsByDate(DateTime date)
     {
-        return _workRecords.Where(r => r.Date.Date == date.Date && r.Parent == null).OrderByDescending(r => r.Date).ToList();
+        return _workRecords.Where(r => r.Date.Date == date.Date && r.Parent == null && r.IsDeleted == 0).OrderByDescending(r => r.Date).ToList();
     }
 
     /// <summary>
@@ -114,7 +114,7 @@ public class WorkLogService
     public List<WorkRecord> GetAllTasksByDate(DateTime date)
     {
         var allTasks = new List<WorkRecord>();
-        foreach (var record in _workRecords.Where(r => r.Date.Date == date.Date))
+        foreach (var record in _workRecords.Where(r => r.Date.Date == date.Date && r.IsDeleted == 0))
         {
             CollectAllTasks(record, allTasks);
         }
@@ -278,7 +278,7 @@ public class WorkLogService
     /// </summary>
     public void SaveAllWorkRecords()
     {
-        foreach (var record in _workRecords)
+        foreach (var record in _workRecords.Where(r => r.IsDeleted == 0))
         {
             SaveWorkRecord(record);
         }
