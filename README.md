@@ -8,16 +8,23 @@
 - 查看工作记录列表
 - 生成工作日志文件（文本格式）
 - 加载已有的工作日志文件
+- 日历选择日期查看记录
+- 状态颜色区分（已完成/进行中/待办/超期）
+- 工作提醒功能
+- 看板视图
+- 数据可视化（图表）
+- SQLite 数据库持久化存储
 
 ## 如何使用
 
 1. **添加工作记录**：
-   - 在左侧选择日期
-   - 输入工作内容
-   - 点击"添加记录"按钮
+   - 点击"添加工作计划"按钮
+   - 输入日期、工作内容、耗时等
+   - 点击确认添加
 
 2. **查看工作记录**：
-   - 右侧列表会显示所有添加的工作记录，按日期倒序排列
+   - 使用左侧日历选择日期
+   - 使用下拉框筛选：全部记录/新增计划/未完成计划
 
 3. **生成工作日志文件**：
    - 点击"生成工作日志文件"按钮
@@ -51,23 +58,117 @@
 
 - C#
 - WPF
-- .NET 10.0
+- .NET 8.0
+- SQLite 数据库
+- LiveCharts 图表
 
 ## 如何构建和运行
 
-1. 确保安装了.NET SDK 10.0或更高版本
+1. 确保安装了 .NET SDK 8.0 或更高版本
 2. 打开命令行工具，进入项目目录
 3. 运行以下命令构建项目：
-   ```
+   ```powershell
    dotnet build
    ```
 4. 运行以下命令启动应用：
-   ```
+   ```powershell
    dotnet run
    ```
+
+## 如何打包发布
+
+### 方法一：发布为单文件 EXE（推荐）
+
+1. 打开命令行，进入项目目录：
+   ```powershell
+   cd D:\Project\WorkLogTool
+   ```
+
+2. 发布为自包含单文件：
+   ```powershell
+   dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
+   ```
+
+3. 生成的 exe 文件位于 `./publish/WorkLogTool.exe`
+
+### 方法二：使用 PowerShell 脚本发布
+
+1. 创建发布脚本 `publish.ps1`：
+   ```powershell
+   $ErrorActionPreference = "Stop"
+
+   Write-Host "开始发布..." -ForegroundColor Green
+
+   # 清理旧发布
+   if (Test-Path "./publish") { Remove-Item "./publish" -Recurse -Force }
+
+   # 发布
+   dotnet publish -c Release -r win-x64 --self-contained true `
+       -p:PublishSingleFile=true `
+       -p:IncludeNativeLibrariesForSelfExtract=true `
+       -p:EnableCompressionInSingleFile=true `
+       -o ./publish
+
+   Write-Host "发布完成: ./publish/WorkLogTool.exe" -ForegroundColor Green
+   Write-Host "文件大小: $((Get-Item ./publish/WorkLogTool.exe).Length / 1MB) MB" -ForegroundColor Cyan
+
+   # 创建 zip 压缩包
+   Compress-Archive -Path ./publish/* -DestinationPath ./WorkLogTool-v1.0.zip -Force
+   Write-Host "压缩包已生成: ./WorkLogTool-v1.0.zip" -ForegroundColor Green
+   ```
+
+2. 运行发布脚本：
+   ```powershell
+   .\publish.ps1
+   ```
+
+### 方法三：使用 Inno Setup 创建安装程序
+
+1. 下载安装 Inno Setup：https://jrsoftware.org/isinfo.php
+
+2. 创建安装脚本 `setup.iss`：
+   ```iss
+   [Setup]
+   AppName=工作日志工具
+   AppVersion=1.0
+   AppPublisher=YourName
+   DefaultDirName={autopf}\WorkLogTool
+   DefaultGroupName=工作日志工具
+   OutputDir=.\installer
+   Compression=lzma2
+   SolidCompression=yes
+
+   [Files]
+   Source="publish\*"; DestDir="{app}"; Flags: recursesubdirs
+
+   [Icons]
+   Name: "{group}\工作日志工具"; Filename: "{app}\WorkLogTool.exe"
+   Name: "{commondesktop}\工作日志工具"; Filename: "{app}\WorkLogTool.exe"
+   ```
+
+3. 编译安装程序：
+   ```powershell
+   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
+   ```
+
+### 打包参数说明
+
+| 参数 | 说明 |
+|------|------|
+| `-r win-x64` | 目标平台为 64 位，改为 `win-x86` 支持 32 位 |
+| `--self-contained true` | 自包含运行时，exe 体积约 80-120MB |
+| `--self-contained false` | 框架依赖，exe 约 200KB，需目标机安装 .NET 8 |
+| `-p:PublishSingleFile=true` | 合并为单个 exe 文件 |
+| `-p:IncludeNativeLibrariesForSelfExtract=true` | 包含原生库 |
+
+## 数据存储
+
+- 数据库文件：`worklog.db`（SQLite）
+- 配置文件：`worklog/` 目录
+- 首次运行会在 exe 同目录创建 `worklog/` 文件夹
 
 ## 注意事项
 
 - 加载日志文件时，系统会解析符合特定格式的文本文件
-- 生成的日志文件使用UTF-8编码
-- 应用程序会在内存中存储工作记录，关闭应用后记录会丢失，建议及时生成日志文件保存
+- 生成的日志文件使用 UTF-8 编码
+- 状态颜色：绿色=已完成，黄色=进行中，蓝色=待办，红色=超期
