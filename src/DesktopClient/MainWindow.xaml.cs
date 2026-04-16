@@ -143,6 +143,47 @@ public partial class MainWindow : Window
             var reminderText = string.Join(Environment.NewLine, todayReminders.Select(r => r.Content));
             MessageBox.Show($"今日提醒:\n{reminderText}", "提醒", MessageBoxButton.OK, MessageBoxImage.Information);
         }
+
+        GenerateRemindersFromIncompleteTasks();
+    }
+
+    private void GenerateRemindersFromIncompleteTasks()
+    {
+        var incompleteRecords = _workLogService.WorkRecords
+            .Where(r => r.Status != "已完成" && r.IsDeleted == 0 && r.Date.Date <= DateTime.Today.AddDays(7))
+            .OrderBy(r => r.Date)
+            .Take(10)
+            .ToList();
+
+        foreach (var record in incompleteRecords)
+        {
+            bool existsMorning = reminders.Any(r => r.Content == record.Content && r.Date.Date == record.Date.Date && r.Time.Hours == 9 && r.Time.Minutes == 30);
+            if (!existsMorning)
+            {
+                reminders.Add(new Reminder
+                {
+                    Date = record.Date.Date,
+                    Time = new TimeSpan(9, 30, 0),
+                    Content = record.Content
+                });
+            }
+
+            bool existsEvening = reminders.Any(r => r.Content == record.Content && r.Date.Date == record.Date.Date && r.Time.Hours == 17 && r.Time.Minutes == 0);
+            if (!existsEvening)
+            {
+                reminders.Add(new Reminder
+                {
+                    Date = record.Date.Date,
+                    Time = new TimeSpan(17, 0, 0),
+                    Content = record.Content
+                });
+            }
+        }
+
+        if (incompleteRecords.Count > 0)
+        {
+            UpdateReminderList();
+        }
     }
 
     private void AddRecordButton_Click(object sender, RoutedEventArgs e)
