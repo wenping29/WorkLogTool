@@ -34,14 +34,24 @@ public partial class EditWorkRecordDialog : Window
         // 设置时间
         if (record.StartTime.HasValue)
         {
+            StartDatePicker.SelectedDate = record.StartTime.Value.Date;
             StartHourTextBox.Text = record.StartTime.Value.Hour.ToString("00");
             StartMinuteTextBox.Text = record.StartTime.Value.Minute.ToString("00");
+        }
+        else
+        {
+            StartDatePicker.SelectedDate = record.Date;
         }
 
         if (record.EndTime.HasValue)
         {
+            EndDatePicker.SelectedDate = record.EndTime.Value.Date;
             EndHourTextBox.Text = record.EndTime.Value.Hour.ToString("00");
             EndMinuteTextBox.Text = record.EndTime.Value.Minute.ToString("00");
+        }
+        else
+        {
+            EndDatePicker.SelectedDate = record.Date;
         }
     }
 
@@ -95,7 +105,8 @@ public partial class EditWorkRecordDialog : Window
             {
                 startHour = Math.Clamp(startHour, 0, 23);
                 startMinute = Math.Clamp(startMinute, 0, 59);
-                DateTime startTime = Record.Date.Date.AddHours(startHour).AddMinutes(startMinute);
+                var startDate = StartDatePicker.SelectedDate ?? Record.Date;
+                DateTime startTime = startDate.Date.AddHours(startHour).AddMinutes(startMinute);
                 Record.StartTime = startTime;
             }
         }
@@ -111,7 +122,8 @@ public partial class EditWorkRecordDialog : Window
             {
                 endHour = Math.Clamp(endHour, 0, 23);
                 endMinute = Math.Clamp(endMinute, 0, 59);
-                DateTime endTime = Record.Date.Date.AddHours(endHour).AddMinutes(endMinute);
+                var endDate = EndDatePicker.SelectedDate ?? Record.Date;
+                DateTime endTime = endDate.Date.AddHours(endHour).AddMinutes(endMinute);
                 Record.EndTime = endTime;
             }
         }

@@ -15,6 +15,8 @@ public partial class AddSubTaskDialog : Window
         InitializeComponent();
         _parentRecord = parentRecord;
         Calendar.SelectedDate = parentRecord.Date;
+        StartDatePicker.SelectedDate = parentRecord.Date;
+        EndDatePicker.SelectedDate = parentRecord.Date;
 
         var now = DateTime.Now;
         StartHourTextBox.Text = now.Hour.ToString();
@@ -64,7 +66,8 @@ public partial class AddSubTaskDialog : Window
         int.TryParse(StartMinuteTextBox.Text, out startMinute);
         startHour = Math.Clamp(startHour, 0, 23);
         startMinute = Math.Clamp(startMinute, 0, 59);
-        var startTime = new DateTime(Calendar.SelectedDate.Value.Year, Calendar.SelectedDate.Value.Month, Calendar.SelectedDate.Value.Day, startHour, startMinute, 0);
+        var startDate = StartDatePicker.SelectedDate ?? Calendar.SelectedDate.Value;
+        var startTime = startDate.Date.AddHours(startHour).AddMinutes(startMinute);
 
         // 解析完成时间
         int endHour = 0, endMinute = 0;
@@ -72,7 +75,8 @@ public partial class AddSubTaskDialog : Window
         int.TryParse(EndMinuteTextBox.Text, out endMinute);
         endHour = Math.Clamp(endHour, 0, 23);
         endMinute = Math.Clamp(endMinute, 0, 59);
-        var endTime = new DateTime(Calendar.SelectedDate.Value.Year, Calendar.SelectedDate.Value.Month, Calendar.SelectedDate.Value.Day, endHour, endMinute, 0);
+        var endDate = EndDatePicker.SelectedDate ?? Calendar.SelectedDate.Value;
+        var endTime = endDate.Date.AddHours(endHour).AddMinutes(endMinute);
 
         Result = new WorkRecord
         {

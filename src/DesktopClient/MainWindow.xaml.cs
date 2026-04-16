@@ -340,6 +340,7 @@ public partial class MainWindow : Window
                 break;
         }
 
+        WorkRecordDataGrid.ItemsSource = null;
         WorkRecordDataGrid.ItemsSource = selectedDateRecords;
         UpdateTodayTaskList(date);
         UpdateIncompleteTasksStatus();

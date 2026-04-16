@@ -33,15 +33,17 @@
             </ComboBox.Items>
         </ComboBox>
 
-        <StackPanel Orientation="Horizontal" Margin="0 10 0 5">
-            <TextBlock Text="开始时间" VerticalAlignment="Center" Margin="0 0 10 0"/>
+        <TextBlock Text="开始时间" Margin="0 10 0 5"/>
+        <StackPanel Orientation="Horizontal">
+            <DatePicker x:Name="StartDatePicker" Width="120" Margin="0 0 10 0"/>
             <TextBox x:Name="StartHourTextBox" Width="50" Margin="0 0 5 0"/>
             <TextBlock Text=":" VerticalAlignment="Center" Margin="0 0 5 0"/>
             <TextBox x:Name="StartMinuteTextBox" Width="50"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" Margin="0 10 0 10">
-            <TextBlock Text="完成时间:" VerticalAlignment="Center" Margin="0 0 10 0"/>
+        <TextBlock Text="结束时间" Margin="0 10 0 5"/>
+        <StackPanel Orientation="Horizontal">
+            <DatePicker x:Name="EndDatePicker" Width="120" Margin="0 0 10 0"/>
             <TextBox x:Name="EndHourTextBox" Width="50" Margin="0 0 5 0"/>
             <TextBlock Text=":" VerticalAlignment="Center" Margin="0 0 5 0"/>
             <TextBox x:Name="EndMinuteTextBox" Width="50"/>
