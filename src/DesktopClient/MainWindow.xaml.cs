@@ -37,6 +37,7 @@ public partial class MainWindow : Window
 
         _workLogService = new WorkLogService(dbPath);
         _workLogService.Initialize();
+        DetailPanel.Initialize(_workLogService, UpdateWorkRecordList, text => StatusText.Text = text);
 
         Calendar.SelectedDate = DateTime.Now;
         ReminderDatePicker.SelectedDate = DateTime.Now;
@@ -336,7 +337,7 @@ public partial class MainWindow : Window
                 selectedDateRecords = _workLogService.GetIncompleteRecordsByDate(date);
                 break;
             default: // 全部记录
-                selectedDateRecords = _workLogService.GetTopLevelRecordsByDate(date);
+                selectedDateRecords = _workLogService.GetAllTasksByDate(date);
                 break;
         }
 
@@ -598,37 +599,50 @@ public partial class MainWindow : Window
 
     private void AddQuickReminderButton_Click(object sender, RoutedEventArgs e)
     {
-        if (QuickReminderDate.SelectedDate == null || string.IsNullOrWhiteSpace(QuickReminderContent.Text))
+        try
         {
-            MessageBox.Show("请选择提醒日期和填写提醒内容", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
+            if (QuickReminderDate.SelectedDate == null || string.IsNullOrWhiteSpace(QuickReminderContent.Text))
+            {
+                MessageBox.Show("请选择提醒日期和填写提醒内容", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (QuickReminderHour == null || QuickReminderMinute == null)
+            {
+                MessageBox.Show("时间输入框未正确初始化", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            int hour = 0;
+            int minute = 0;
+
+            int.TryParse(QuickReminderHour.Text, out hour);
+            int.TryParse(QuickReminderMinute.Text, out minute);
+
+            // 确保小时和分钟在有效范围
+            hour = Math.Max(0, Math.Min(23, hour));
+            minute = Math.Max(0, Math.Min(59, minute));
+
+            var reminder = new Reminder
+            {
+                Date = QuickReminderDate.SelectedDate.Value,
+                Time = new TimeSpan(hour, minute, 0),
+                Content = QuickReminderContent.Text.Trim()
+            };
+
+            reminders.Add(reminder);
+            UpdateReminderList();
+
+            // 清空输入框
+            QuickReminderContent.Clear();
+
+            StatusText.Text = "提醒添加成功";
+                MessageBox.Show("提醒添加成功", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
         }
-
-        int hour = 0;
-        int minute = 0;
-
-        int.TryParse(QuickReminderHour.Text, out hour);
-        int.TryParse(QuickReminderMinute.Text, out minute);
-
-        // 确保小时和分钟在有效范围
-        hour = Math.Max(0, Math.Min(23, hour));
-        minute = Math.Max(0, Math.Min(59, minute));
-
-        var reminder = new Reminder
+        catch (Exception ex)
         {
-            Date = QuickReminderDate.SelectedDate.Value,
-            Time = new TimeSpan(hour, minute, 0),
-            Content = QuickReminderContent.Text.Trim()
-        };
-
-        reminders.Add(reminder);
-        UpdateReminderList();
-
-        // 清空输入框
-        QuickReminderContent.Clear();
-
-        StatusText.Text = "提醒添加成功";
-        MessageBox.Show("提醒添加成功", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show($"添加提醒时出错: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void UpdateReminderList()
@@ -636,7 +650,8 @@ public partial class MainWindow : Window
         ReminderList.Items.Clear();
         foreach (var reminder in reminders.OrderBy(r => r.Date).ThenBy(r => r.Time))
         {
-            ReminderList.Items.Add($"{reminder.Date.ToString("yyyy-MM-dd")} {reminder.Time.ToString("HH:mm")}: {reminder.Content}");
+            string timeStr = $"{reminder.Time.Hours:D2}:{reminder.Time.Minutes:D2}";
+            ReminderList.Items.Add($"{reminder.Date:yyyy-MM-dd} {timeStr}: {reminder.Content}");
         }
     }
 
@@ -888,14 +903,7 @@ public partial class MainWindow : Window
 
     private void ClearDetailPanel()
     {
-        foreach (var child in DetailPanel.Children.OfType<FrameworkElement>())
-        {
-            if (!string.IsNullOrEmpty(child.Name))
-            {
-                try { DetailPanel.UnregisterName(child.Name); } catch { }
-            }
-        }
-        DetailPanel.Children.Clear();
+        DetailPanel.ClearDetailPanel();
     }
 
     private void CheckEndOfWorkDay()
@@ -922,286 +930,7 @@ public partial class MainWindow : Window
 
     private void WorkRecordTreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        ClearDetailPanel();
-
-        if (e.NewValue is WorkRecord record)
-        {
-            // 存储当前编辑的记录引用
-            DetailPanel.Tag = record;
-
-            // 标题
-            DetailPanel.Children.Add(new TextBlock
-            {
-                Text = "工作详情",
-                FontSize = 16,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 15)
-            });
-
-            // 工作内容
-            DetailPanel.Children.Add(new TextBlock { Text = "工作内容:", Margin = new Thickness(0, 0, 0, 5) });
-            var contentTextBox = new TextBox
-            {
-                Text = record.Content,
-                TextWrapping = TextWrapping.Wrap,
-                Height = 120,
-                Margin = new Thickness(0, 0, 0, 10),
-                AcceptsReturn = true
-            };
-            contentTextBox.Name = "ContentTextBox";
-            DetailPanel.RegisterName(contentTextBox.Name, contentTextBox);
-            DetailPanel.Children.Add(contentTextBox);
-
-            // 日期
-            DetailPanel.Children.Add(new TextBlock { Text = "日期:", Margin = new Thickness(0, 0, 0, 5) });
-            var datePicker = new DatePicker
-            {
-                SelectedDate = record.Date,
-                Margin = new Thickness(0, 0, 0, 10),
-                DisplayDateStart = new DateTime(2020, 1, 1),
-                DisplayDateEnd = new DateTime(2100, 12, 31)
-            };
-            datePicker.Name = "DatePicker";
-            DetailPanel.RegisterName(datePicker.Name, datePicker);
-            DetailPanel.Children.Add(datePicker);
-
-            // 耗时
-            DetailPanel.Children.Add(new TextBlock { Text = "耗时(小时):", Margin = new Thickness(0, 0, 0, 5) });
-            var hoursTextBox = new TextBox
-            {
-                Text = record.Hours.ToString(),
-                Margin = new Thickness(0, 0, 0, 10),
-                Width = 80
-            };
-            hoursTextBox.Name = "HoursTextBox";
-            DetailPanel.RegisterName(hoursTextBox.Name, hoursTextBox);
-            DetailPanel.Children.Add(hoursTextBox);
-
-            // 成本
-            DetailPanel.Children.Add(new TextBlock { Text = "成本:", Margin = new Thickness(0, 0, 0, 5) });
-            var costTextBox = new TextBox
-            {
-                Text = record.Cost.ToString(),
-                Margin = new Thickness(0, 0, 0, 10),
-                Width = 80
-            };
-            costTextBox.Name = "CostTextBox";
-            DetailPanel.Children.Add(costTextBox);
-
-            // 状态
-            DetailPanel.Children.Add(new TextBlock { Text = "状态:", Margin = new Thickness(0, 0, 0, 5) });
-            var statusComboBox = new ComboBox
-            {
-                ItemsSource = new[] { "待办", "进行中", "已完成" },
-                SelectedItem = record.Status,
-                Margin = new Thickness(0, 0, 0, 10),
-                Width = 100
-            };
-            statusComboBox.Name = "StatusComboBox";
-            DetailPanel.Children.Add(statusComboBox);
-
-            // 进度
-            DetailPanel.Children.Add(new TextBlock { Text = "进度(%):", Margin = new Thickness(0, 0, 0, 5) });
-            var progressTextBox = new TextBox
-            {
-                Text = record.Progress.ToString(),
-                Margin = new Thickness(0, 0, 0, 10),
-                Width = 80
-            };
-            progressTextBox.Name = "ProgressTextBox";
-            DetailPanel.Children.Add(progressTextBox);
-
-            // 开始时间
-            DetailPanel.Children.Add(new TextBlock { Text = "开始时间 (HH:mm):", Margin = new Thickness(0, 0, 0, 5) });
-            var startTimePanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
-            var startHourTextBox = new TextBox
-            {
-                Width = 50,
-                Text = record.StartTime.HasValue ? record.StartTime.Value.Hour.ToString("00") : string.Empty
-            };
-            startHourTextBox.Name = "StartHourTextBox";
-            startTimePanel.Children.Add(startHourTextBox);
-            startTimePanel.Children.Add(new TextBlock { Text = ":", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 0, 5, 0) });
-            var startMinuteTextBox = new TextBox
-            {
-                Width = 50,
-                Text = record.StartTime.HasValue ? record.StartTime.Value.Minute.ToString("00") : string.Empty
-            };
-            startMinuteTextBox.Name = "StartMinuteTextBox";
-            startTimePanel.Children.Add(startMinuteTextBox);
-            DetailPanel.Children.Add(startTimePanel);
-
-            // 结束时间
-            DetailPanel.Children.Add(new TextBlock { Text = "结束时间 (HH:mm):", Margin = new Thickness(0, 0, 0, 5) });
-            var endTimePanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
-            var endHourTextBox = new TextBox
-            {
-                Width = 50,
-                Text = record.EndTime.HasValue ? record.EndTime.Value.Hour.ToString("00") : string.Empty
-            };
-            endHourTextBox.Name = "EndHourTextBox";
-            endTimePanel.Children.Add(endHourTextBox);
-            endTimePanel.Children.Add(new TextBlock { Text = ":", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 0, 5, 0) });
-            var endMinuteTextBox = new TextBox
-            {
-                Width = 50,
-                Text = record.EndTime.HasValue ? record.EndTime.Value.Minute.ToString("00") : string.Empty
-            };
-            endMinuteTextBox.Name = "EndMinuteTextBox";
-            endTimePanel.Children.Add(endMinuteTextBox);
-            DetailPanel.Children.Add(endTimePanel);
-
-            // 保存按钮和删除按钮
-            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0) };
-            var saveButton = new Button
-            {
-                Content = "保存修改",
-                Width = 80,
-                Margin = new Thickness(0, 0, 10, 0)
-            };
-            saveButton.Click += SaveWorkRecordDetail_Click;
-            buttonPanel.Children.Add(saveButton);
-
-            // 删除按钮
-            var deleteButton = new Button
-            {
-                Content = "删除",
-                Width = 60,
-                Background = Brushes.LightCoral,
-                Foreground = Brushes.Black
-            };
-            deleteButton.Click += DeleteWorkRecordButton_Click;
-            buttonPanel.Children.Add(deleteButton);
-            DetailPanel.Children.Add(buttonPanel);
-
-            // 子任务信息
-            if (record.SubTasks.Count > 0)
-                DetailPanel.Children.Add(new TextBlock { Text = $"子任务数量: {record.SubTasks.Count}", Margin = new Thickness(0, 10, 0, 0) });
-        }
-        else
-        {
-            DetailPanel.Children.Add(new TextBlock
-            {
-                Text = "请点击左侧工作记录查看详情",
-                FontSize = 14,
-                Foreground = Brushes.Gray,
-                HorizontalAlignment = HorizontalAlignment.Center
-            });
-        }
-    }
-
-    private void SaveWorkRecordDetail_Click(object sender, RoutedEventArgs e)
-    {
-        var record = DetailPanel.Tag as WorkRecord;
-        if (record == null)
-        {
-            return;
-        }
-
-        // 获取各个控件的值
-        var contentTextBox = FindName("ContentTextBox") as TextBox;
-        var datePicker = FindName("DatePicker") as DatePicker;
-        var hoursTextBox = FindName("HoursTextBox") as TextBox;
-        var costTextBox = FindName("CostTextBox") as TextBox;
-        var statusComboBox = FindName("StatusComboBox") as ComboBox;
-        var progressTextBox = FindName("ProgressTextBox") as TextBox;
-        var startHourTextBox = FindName("StartHourTextBox") as TextBox;
-        var startMinuteTextBox = FindName("StartMinuteTextBox") as TextBox;
-        var endHourTextBox = FindName("EndHourTextBox") as TextBox;
-        var endMinuteTextBox = FindName("EndMinuteTextBox") as TextBox;
-
-        // 更新记录
-        if (contentTextBox != null && !string.IsNullOrWhiteSpace(contentTextBox.Text))
-            record.Content = contentTextBox.Text.Trim();
-
-        if (datePicker != null && datePicker.SelectedDate.HasValue)
-            record.Date = datePicker.SelectedDate.Value;
-
-        if (hoursTextBox != null && double.TryParse(hoursTextBox.Text, out double hours))
-            record.Hours = hours;
-
-        if (costTextBox != null && decimal.TryParse(costTextBox.Text, out decimal cost))
-            record.Cost = cost;
-
-        if (statusComboBox != null && statusComboBox.SelectedItem != null)
-            record.Status = statusComboBox.SelectedItem.ToString();
-
-        if (progressTextBox != null && int.TryParse(progressTextBox.Text, out int progress))
-            record.Progress = Math.Clamp(progress, 0, 100);
-
-        // 解析开始时间
-        if (!string.IsNullOrWhiteSpace(startHourTextBox?.Text) && !string.IsNullOrWhiteSpace(startMinuteTextBox?.Text))
-        {
-            if (int.TryParse(startHourTextBox.Text, out int startHour) && int.TryParse(startMinuteTextBox.Text, out int startMinute))
-            {
-                startHour = Math.Clamp(startHour, 0, 23);
-                startMinute = Math.Clamp(startMinute, 0, 59);
-                DateTime startTime = record.Date.Date.AddHours(startHour).AddMinutes(startMinute);
-                record.StartTime = startTime;
-            }
-        }
-        else
-        {
-            record.StartTime = null;
-        }
-
-        // 解析结束时间
-        if (!string.IsNullOrWhiteSpace(endHourTextBox?.Text) && !string.IsNullOrWhiteSpace(endMinuteTextBox?.Text))
-        {
-            if (int.TryParse(endHourTextBox.Text, out int endHour) && int.TryParse(endMinuteTextBox.Text, out int endMinute))
-            {
-                endHour = Math.Clamp(endHour, 0, 23);
-                endMinute = Math.Clamp(endMinute, 0, 59);
-                DateTime endTime = record.Date.Date.AddHours(endHour).AddMinutes(endMinute);
-                record.EndTime = endTime;
-            }
-        }
-        else
-        {
-            record.EndTime = null;
-        }
-
-        // 更新数据库
-        UpdateWorkRecordInDatabase(record);
-
-        // 更新UI
-        UpdateWorkRecordList();
-        StatusText.Text = $"工作记录 \"{record.Content}\" 已保存";
-
-        MessageBox.Show("保存成功", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    // 更新工作记录到数据库
-    private void UpdateWorkRecordInDatabase(WorkRecord record)
-    {
-        _workLogService.UpdateWorkRecord(record);
-    }
-
-    // 删除工作记录
-    private void DeleteWorkRecordButton_Click(object sender, RoutedEventArgs e)
-    {
-        var record = DetailPanel.Tag as WorkRecord;
-        if (record == null)
-        {
-            return;
-        }
-
-        // 软删除：标记为已删除（包括所有子任务）
-        _workLogService.DeleteWorkRecord(record);
-
-        // 更新UI
-        UpdateWorkRecordList();
-        ClearDetailPanel();
-        DetailPanel.Children.Add(new TextBlock
-        {
-            Text = "记录已删除\n请点击表格中的工作记录查看详情",
-            FontSize = 14,
-            Foreground = Brushes.Gray,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            TextAlignment = TextAlignment.Center
-        });
-
-        StatusText.Text = $"工作记录 \"{record.Content}\" 已删除";
+        DetailPanel.OnWorkRecordSelected(e.NewValue as WorkRecord);
     }
 
 
@@ -1220,171 +949,11 @@ public partial class MainWindow : Window
 
     private void WorkRecordDataGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        ClearDetailPanel();
+        DetailPanel.OnWorkRecordSelected(WorkRecordDataGrid.SelectedItem as WorkRecord);
+    }
 
-        if (WorkRecordDataGrid.SelectedItem is WorkRecord record)
-        {
-            // 存储当前编辑的记录引用
-            DetailPanel.Tag = record;
-
-            // 标题
-            DetailPanel.Children.Add(new TextBlock
-            {
-                Text = "工作详情",
-                FontSize = 16,
-                FontWeight = FontWeights.Bold,
-                Margin = new Thickness(0, 0, 0, 15)
-            });
-
-            // 工作内容
-            DetailPanel.Children.Add(new TextBlock { Text = "工作内容:", Margin = new Thickness(0, 0, 0, 5) });
-            var contentTextBox = new TextBox
-            {
-                Text = record.Content,
-                TextWrapping = TextWrapping.Wrap,
-                Height = 120,
-                Margin = new Thickness(0, 0, 0, 10),
-                AcceptsReturn = true
-            };
-            contentTextBox.Name = "ContentTextBox";
-            DetailPanel.RegisterName(contentTextBox.Name, contentTextBox);
-            DetailPanel.Children.Add(contentTextBox);
-
-            // 日期
-            DetailPanel.Children.Add(new TextBlock { Text = "日期:", Margin = new Thickness(0, 0, 0, 5) });
-            var datePicker = new DatePicker
-            {
-                SelectedDate = record.Date,
-                Margin = new Thickness(0, 0, 0, 10),
-                DisplayDateStart = new DateTime(2020, 1, 1),
-                DisplayDateEnd = new DateTime(2100, 12, 31)
-            };
-            datePicker.Name = "DatePicker";
-            DetailPanel.RegisterName(datePicker.Name, datePicker);
-            DetailPanel.Children.Add(datePicker);
-
-            // 耗时
-            DetailPanel.Children.Add(new TextBlock { Text = "耗时(小时):", Margin = new Thickness(0, 0, 0, 5) });
-            var hoursTextBox = new TextBox
-            {
-                Text = record.Hours.ToString(),
-                Margin = new Thickness(0, 0, 0, 10),
-                Width = 80
-            };
-            hoursTextBox.Name = "HoursTextBox";
-            DetailPanel.RegisterName(hoursTextBox.Name, hoursTextBox);
-            DetailPanel.Children.Add(hoursTextBox);
-
-            // 成本
-            DetailPanel.Children.Add(new TextBlock { Text = "成本:", Margin = new Thickness(0, 0, 0, 5) });
-            var costTextBox = new TextBox
-            {
-                Text = record.Cost.ToString(),
-                Margin = new Thickness(0, 0, 0, 10),
-                Width = 80
-            };
-            costTextBox.Name = "CostTextBox";
-            DetailPanel.Children.Add(costTextBox);
-
-            // 状态
-            DetailPanel.Children.Add(new TextBlock { Text = "状态:", Margin = new Thickness(0, 0, 0, 5) });
-            var statusComboBox = new ComboBox
-            {
-                ItemsSource = new[] { "待办", "进行中", "已完成" },
-                SelectedItem = record.Status,
-                Margin = new Thickness(0, 0, 0, 10),
-                Width = 100
-            };
-            statusComboBox.Name = "StatusComboBox";
-            DetailPanel.Children.Add(statusComboBox);
-
-            // 进度
-            DetailPanel.Children.Add(new TextBlock { Text = "进度(%):", Margin = new Thickness(0, 0, 0, 5) });
-            var progressTextBox = new TextBox
-            {
-                Text = record.Progress.ToString(),
-                Margin = new Thickness(0, 0, 0, 10),
-                Width = 80
-            };
-            progressTextBox.Name = "ProgressTextBox";
-            DetailPanel.Children.Add(progressTextBox);
-
-            // 开始时间
-            DetailPanel.Children.Add(new TextBlock { Text = "开始时间 (HH:mm):", Margin = new Thickness(0, 0, 0, 5) });
-            var startTimePanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
-            var startHourTextBox = new TextBox
-            {
-                Width = 50,
-                Text = record.StartTime.HasValue ? record.StartTime.Value.Hour.ToString("00") : string.Empty
-            };
-            startHourTextBox.Name = "StartHourTextBox";
-            startTimePanel.Children.Add(startHourTextBox);
-            startTimePanel.Children.Add(new TextBlock { Text = ":", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 0, 5, 0) });
-            var startMinuteTextBox = new TextBox
-            {
-                Width = 50,
-                Text = record.StartTime.HasValue ? record.StartTime.Value.Minute.ToString("00") : string.Empty
-            };
-            startMinuteTextBox.Name = "StartMinuteTextBox";
-            startTimePanel.Children.Add(startMinuteTextBox);
-            DetailPanel.Children.Add(startTimePanel);
-
-            // 结束时间
-            DetailPanel.Children.Add(new TextBlock { Text = "结束时间 (HH:mm):", Margin = new Thickness(0, 0, 0, 5) });
-            var endTimePanel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
-            var endHourTextBox = new TextBox
-            {
-                Width = 50,
-                Text = record.EndTime.HasValue ? record.EndTime.Value.Hour.ToString("00") : string.Empty
-            };
-            endHourTextBox.Name = "EndHourTextBox";
-            endTimePanel.Children.Add(endHourTextBox);
-            endTimePanel.Children.Add(new TextBlock { Text = ":", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(5, 0, 5, 0) });
-            var endMinuteTextBox = new TextBox
-            {
-                Width = 50,
-                Text = record.EndTime.HasValue ? record.EndTime.Value.Minute.ToString("00") : string.Empty
-            };
-            endMinuteTextBox.Name = "EndMinuteTextBox";
-            endTimePanel.Children.Add(endMinuteTextBox);
-            DetailPanel.Children.Add(endTimePanel);
-
-            // 保存按钮和删除按钮
-            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 20, 0, 0) };
-            var saveButton = new Button
-            {
-                Content = "保存修改",
-                Width = 80,
-                Margin = new Thickness(0, 0, 10, 0)
-            };
-            saveButton.Click += SaveWorkRecordDetail_Click;
-            buttonPanel.Children.Add(saveButton);
-
-            // 删除按钮
-            var deleteButton = new Button
-            {
-                Content = "删除",
-                Width = 60,
-                Background = Brushes.LightCoral,
-                Foreground = Brushes.Black
-            };
-            deleteButton.Click += DeleteWorkRecordButton_Click;
-            buttonPanel.Children.Add(deleteButton);
-            DetailPanel.Children.Add(buttonPanel);
-
-            // 子任务信息
-            if (record.SubTasks.Count > 0)
-                DetailPanel.Children.Add(new TextBlock { Text = $"子任务数量: {record.SubTasks.Count}", Margin = new Thickness(0, 10, 0, 0) });
-        }
-        else
-        {
-            DetailPanel.Children.Add(new TextBlock
-            {
-                Text = "请点击左侧表格中的工作记录查看详情",
-                FontSize = 14,
-                Foreground = Brushes.Gray,
-                HorizontalAlignment = HorizontalAlignment.Center
-            });
-        }
+    private void UpdateWorkRecordInDatabase(WorkRecord record)
+    {
+        _workLogService.UpdateWorkRecord(record);
     }
 }

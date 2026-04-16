@@ -46,14 +46,17 @@
                             <TextBlock Text="添加提醒" FontSize="12" FontWeight="Bold" Margin="0,0,0,5"/>
                             <StackPanel Orientation="Horizontal">
                                 <DatePicker x:Name="QuickReminderDate" Width="100" Margin="0,0,5,5"/>
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal">
                                 <TextBox x:Name="QuickReminderHour" Width="45" Text="08" Margin="0,0,2,5"/>
                                 <TextBlock Text=":" VerticalAlignment="Center" Margin="0,0,2,5"/>
                                 <TextBox x:Name="QuickReminderMinute" Width="45" Text="00" Margin="0,0,5,5"/>
                             </StackPanel>
-                            <TextBox x:Name="QuickReminderContent" AcceptsReturn="True" Height="40" Margin="0,0,0,5" Padding="2" />
-                            <Button x:Name="AddQuickReminderButton" Content="添加提醒" Click="AddQuickReminderButton_Click" Width="60" HorizontalAlignment="Right"/>
+                             <TextBlock Text="提醒内容" FontSize="12" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <StackPanel Orientation="Horizontal" Height="50" Width="220" Margin="0,0,0,5">
+                                <TextBox x:Name="QuickReminderContent" AcceptsReturn="True" Width="200" Height="40" Margin="0,0,0,0" Padding="2" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="10,10,10,15" HorizontalAlignment="Right">
+                                <Button x:Name="AddQuickReminderButton" Content="添加提醒" Click="AddQuickReminderButton_Click" Width="60" HorizontalAlignment="Right"/>
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -163,7 +166,7 @@
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellEditingTemplate>
                                     </DataGridTemplateColumn>
-                                    <DataGridTextColumn Header="开始时间" Binding="{Binding StartTime, StringFormat={}{0:HH:mm}}" Width="90" IsReadOnly="True">
+                                    <DataGridTextColumn Header="开始时间" Binding="{Binding StartTime, StringFormat={}{0:MM-dd HH:mm}}" Width="90" IsReadOnly="True">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="TextAlignment" Value="Center"/>
@@ -171,7 +174,7 @@
                                             </Style>
                                         </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>
-                                    <DataGridTextColumn Header="结束时间" Binding="{Binding EndTime, StringFormat={}{0:HH:mm}}" Width="90" IsReadOnly="True">
+                                    <DataGridTextColumn Header="结束时间" Binding="{Binding EndTime, StringFormat={}{0:MM-ddHH:mm}}" Width="90" IsReadOnly="True">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="TextAlignment" Value="Center"/>
@@ -188,9 +191,7 @@
                     </Border>
 
                     <Border Grid.Column="2" BorderBrush="Gray" BorderThickness="1" CornerRadius="5" Margin="5" Padding="10">
-                        <StackPanel x:Name="DetailPanel">
-                            <TextBlock Text="请点击左侧工作记录查看详情" FontSize="14" Foreground="Gray" HorizontalAlignment="Center"/>
-                        </StackPanel>
+                        <local:WorkRecordDetailPanel x:Name="DetailPanel"/>
                     </Border>
                 </Grid>
             </TabItem>

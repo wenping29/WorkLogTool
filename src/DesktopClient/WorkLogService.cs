@@ -105,7 +105,7 @@ public class WorkLogService
     /// </summary>
     public List<WorkRecord> GetTopLevelRecordsByDate(DateTime date)
     {
-        return _workRecords.Where(r => r.Date.Date == date.Date && r.Parent == null && r.IsDeleted == 0).OrderByDescending(r => r.Date).ToList();
+        return _workRecords.Where(r => r.Date.Date <= date.Date && r.Parent == null && r.IsDeleted == 0).OrderByDescending(r => r.Date).ToList();
     }
 
     /// <summary>
@@ -114,7 +114,7 @@ public class WorkLogService
     public List<WorkRecord> GetAllTasksByDate(DateTime date)
     {
         var allTasks = new List<WorkRecord>();
-        foreach (var record in _workRecords.Where(r => r.Date.Date == date.Date && r.IsDeleted == 0))
+        foreach (var record in _workRecords.Where(r => r.Date.Date <= date.Date && r.IsDeleted == 0))
         {
             CollectAllTasks(record, allTasks);
         }
@@ -146,7 +146,7 @@ public class WorkLogService
     /// </summary>
     public List<WorkRecord> GetIncompleteRecordsByDate(DateTime date)
     {
-        return _workRecords.Where(r => r.Date.Date == date.Date && r.Status != "已完成" && r.Parent == null && r.IsDeleted == 0).ToList();
+        return _workRecords.Where(r => r.Date.Date <= date.Date && r.Status != "已完成" && r.Parent == null && r.IsDeleted == 0).ToList();
     }
 
     /// <summary>

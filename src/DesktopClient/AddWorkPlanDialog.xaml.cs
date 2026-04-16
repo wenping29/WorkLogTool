@@ -13,10 +13,10 @@ public partial class AddWorkPlanDialog : Window
     {
         InitializeComponent();
         var now = DateTime.Now;
-        StartHourTextBox.Text = now.Hour.ToString();
-        StartMinuteTextBox.Text = now.Minute.ToString();
-        EndHourTextBox.Text = now.AddHours(1).Hour.ToString();
-        EndMinuteTextBox.Text = now.AddHours(1).Minute.ToString();
+        StartDatePicker.SelectedDate = now.Date;
+        StartTimeTextBox.Text = now.ToString("HH:mm");
+        EndDatePicker.SelectedDate = now.Date;
+        EndTimeTextBox.Text = now.AddHours(1).ToString("HH:mm");
     }
 
     public AddWorkPlanDialog(DateTime defaultDate) : this()
@@ -60,20 +60,18 @@ public partial class AddWorkPlanDialog : Window
         }
 
         // 解析开始时间
-        int startHour = 0, startMinute = 0;
-        int.TryParse(StartHourTextBox.Text, out startHour);
-        int.TryParse(StartMinuteTextBox.Text, out startMinute);
-        startHour = Math.Clamp(startHour, 0, 23);
-        startMinute = Math.Clamp(startMinute, 0, 59);
-        var startTime = new DateTime(Calendar.SelectedDate.Value.Year, Calendar.SelectedDate.Value.Month, Calendar.SelectedDate.Value.Day, startHour, startMinute, 0);
+        DateTime startTime;
+        if (StartDatePicker.SelectedDate == null || !DateTime.TryParse(StartDatePicker.SelectedDate.Value.ToString("yyyy-MM-dd") + " " + StartTimeTextBox.Text, out startTime))
+        {
+            startTime = DateTime.Now;
+        }
 
         // 解析完成时间
-        int endHour = 0, endMinute = 0;
-        int.TryParse(EndHourTextBox.Text, out endHour);
-        int.TryParse(EndMinuteTextBox.Text, out endMinute);
-        endHour = Math.Clamp(endHour, 0, 23);
-        endMinute = Math.Clamp(endMinute, 0, 59);
-        var endTime = new DateTime(Calendar.SelectedDate.Value.Year, Calendar.SelectedDate.Value.Month, Calendar.SelectedDate.Value.Day, endHour, endMinute, 0);
+        DateTime endTime;
+        if (EndDatePicker.SelectedDate == null || !DateTime.TryParse(EndDatePicker.SelectedDate.Value.ToString("yyyy-MM-dd") + " " + EndTimeTextBox.Text, out endTime))
+        {
+            endTime = DateTime.Now.AddHours(1);
+        }
 
         Result = new WorkRecord
         {
