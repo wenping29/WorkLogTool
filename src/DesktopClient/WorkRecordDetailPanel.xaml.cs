@@ -82,19 +82,27 @@ public partial class WorkRecordDetailPanel : UserControl
             _currentRecord.Progress = Math.Clamp(progress, 0, 100);
 
         DateTime? startDateTime = null;
-        if (StartDatePicker.SelectedDate != null && !string.IsNullOrWhiteSpace(StartTimeTextBox.Text))
+        try
         {
-            if (DateTime.TryParse(StartDatePicker.SelectedDate.Value.ToString("yyyy-MM-dd") + " " + StartTimeTextBox.Text, out DateTime parsedStart))
-                startDateTime = parsedStart;
+            if (StartDatePicker != null && StartDatePicker.SelectedDate != null && StartTimeTextBox != null && !string.IsNullOrWhiteSpace(StartTimeTextBox.Text))
+            {
+                if (DateTime.TryParse(StartDatePicker.SelectedDate.Value.ToString("yyyy-MM-dd") + " " + StartTimeTextBox.Text, out DateTime parsedStart))
+                    startDateTime = parsedStart;
+            }
         }
+        catch { }
         _currentRecord.StartTime = startDateTime;
 
         DateTime? endDateTime = null;
-        if (EndDatePicker.SelectedDate != null && !string.IsNullOrWhiteSpace(EndTimeTextBox.Text))
+        try
         {
-            if (DateTime.TryParse(EndDatePicker.SelectedDate.Value.ToString("yyyy-MM-dd") + " " + EndTimeTextBox.Text, out DateTime parsedEnd))
-                endDateTime = parsedEnd;
+            if (EndDatePicker != null && EndDatePicker.SelectedDate != null && EndTimeTextBox != null && !string.IsNullOrWhiteSpace(EndTimeTextBox.Text))
+            {
+                if (DateTime.TryParse(EndDatePicker.SelectedDate.Value.ToString("yyyy-MM-dd") + " " + EndTimeTextBox.Text, out DateTime parsedEnd))
+                    endDateTime = parsedEnd;
+            }
         }
+        catch { }
         _currentRecord.EndTime = endDateTime;
 
         _workLogService.UpdateWorkRecord(_currentRecord);

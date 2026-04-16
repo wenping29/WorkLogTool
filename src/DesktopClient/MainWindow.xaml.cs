@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Media;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
         UpdateIncompleteTasksStatus();
         CheckTodayReminders();
         InitializeTimers();
+        CheckCurrentMinuteReminders();
         CheckFirstOpenToday();
     }
 
@@ -140,7 +142,7 @@ public partial class MainWindow : Window
         
         if (todayReminders.Count > 0)
         {
-            var reminderText = string.Join(Environment.NewLine, todayReminders.Select(r => r.Content));
+            var reminderText = string.Join(Environment.NewLine, todayReminders.Select(r => $"{r.Time.Hours:D2}:{r.Time.Minutes:D2} - {r.Content}"));
             MessageBox.Show($"今日提醒:\n{reminderText}", "提醒", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -155,25 +157,27 @@ public partial class MainWindow : Window
             .Take(10)
             .ToList();
 
+        var today = DateTime.Today;
+
         foreach (var record in incompleteRecords)
         {
-            bool existsMorning = reminders.Any(r => r.Content == record.Content && r.Date.Date == record.Date.Date && r.Time.Hours == 9 && r.Time.Minutes == 30);
+            bool existsMorning = reminders.Any(r => r.Content == record.Content && r.Date.Date == today && r.Time.Hours == 9 && r.Time.Minutes == 30);
             if (!existsMorning)
             {
                 reminders.Add(new Reminder
                 {
-                    Date = record.Date.Date,
+                    Date = today,
                     Time = new TimeSpan(9, 30, 0),
                     Content = record.Content
                 });
             }
 
-            bool existsEvening = reminders.Any(r => r.Content == record.Content && r.Date.Date == record.Date.Date && r.Time.Hours == 17 && r.Time.Minutes == 0);
+            bool existsEvening = reminders.Any(r => r.Content == record.Content && r.Date.Date == today && r.Time.Hours == 17 && r.Time.Minutes == 0);
             if (!existsEvening)
             {
                 reminders.Add(new Reminder
                 {
-                    Date = record.Date.Date,
+                    Date = today,
                     Time = new TimeSpan(17, 0, 0),
                     Content = record.Content
                 });
@@ -916,29 +920,66 @@ public partial class MainWindow : Window
     // 初始化时启动定时检查
     private void InitializeTimers()
     {
-        // 每小时检查一次
         var timer = new System.Threading.Timer((state) =>
         {
-            CheckReminders();
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                CheckReminders();
+            });
             CheckEndOfWorkDay();
-        }, null, 0, 60 * 60 * 1000);
+        }, null, 0, 10 * 1000);
     }
 
     private void CheckReminders()
     {
         var now = DateTime.Now;
-        var todayReminders = reminders.Where(r => 
-            r.Date.Date == now.Date && 
-            r.Time.Hours == now.Hour && 
-            r.Time.Minutes == now.Minute).ToList();
+        System.Diagnostics.Debug.WriteLine($"CheckReminders called at {now}, reminders count: {reminders.Count}");
 
-        if (todayReminders.Count > 0)
+        foreach (var r in reminders)
         {
-            var reminderText = string.Join(Environment.NewLine, todayReminders.Select(r => r.Content));
+            System.Diagnostics.Debug.WriteLine($"Reminder: {r.Date} {r.Time}, Content: {r.Content}");
+        }
+
+        var currentMinute = now.Hour * 60 + now.Minute;
+        var triggeredReminders = new List<Reminder>();
+
+        foreach (var r in reminders.ToList())
+        {
+            var reminderMinute = r.Time.Hours * 60 + r.Time.Minutes;
+            var diff = Math.Abs(reminderMinute - currentMinute);
+            System.Diagnostics.Debug.WriteLine($"Checking: {r.Date.Date} == {now.Date}? {r.Date.Date == now.Date}, diff={diff}");
+            if (r.Date.Date == now.Date && diff <= 1)
+            {
+                triggeredReminders.Add(r);
+            }
+        }
+
+        System.Diagnostics.Debug.WriteLine($"Triggered: {triggeredReminders.Count}");
+
+        if (triggeredReminders.Count > 0)
+        {
+            var reminderText = string.Join(Environment.NewLine, triggeredReminders.Select(r => r.Content));
             Application.Current.Dispatcher.Invoke(() =>
             {
+                PlayReminderSound();
                 MessageBox.Show(reminderText, "提醒", MessageBoxButton.OK, MessageBoxImage.Information);
             });
+        }
+    }
+
+    private void CheckCurrentMinuteReminders()
+    {
+        CheckReminders();
+    }
+
+    private void PlayReminderSound()
+    {
+        try
+        {
+            System.Media.SystemSounds.Exclamation.Play();
+        }
+        catch
+        {
         }
     }
 
